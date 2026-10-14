@@ -5,13 +5,16 @@ import { ArrowLeft, ArrowRight, Bookmark, BookOpen, Check, ChevronDown, ChevronL
   Sun, X } from 'lucide-react';
 import { getData, normalise, parseReference, posLabel, readRoute, readStorage, validateRoute, westernDigits, writeStorage } from './lib';
 import type { Metadata, RootData, RootDictionary, RootIndex, Route, SavedWord, Surah, Word } from './types';
+import { aboutDataCopy } from './about-data';
 import './dictionary.css';
 
 type Dialog = 'sources' | 'saved' | 'settings' | null;
 type Boot = { surahs: Surah[]; roots: RootIndex; metadata: Metadata };
 const format = new Intl.NumberFormat('en');
 
-function Modal({ title, children, close }: { title: string; children: ReactNode; close: () => void }) {
+function Modal({ title, children, close, language, eyebrow = 'YOUR EXPLORER' }: {
+  title: string; children: ReactNode; close: () => void; language?: 'ur' | 'en'; eyebrow?: string;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const previous = document.activeElement as HTMLElement;
@@ -30,12 +33,35 @@ function Modal({ title, children, close }: { title: string; children: ReactNode;
     return () => { document.body.style.overflow = oldOverflow; document.removeEventListener('keydown', key); previous?.focus(); };
   }, [close]);
   return <div className="modal-backdrop" onClick={(event) => { if (event.target === event.currentTarget) close(); }}>
-    <div className="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" ref={ref}>
-      <div className="modal-heading"><div><span className="eyebrow">YOUR EXPLORER</span><h2 id="modal-title">{title}</h2></div>
-        <button className="icon-button" aria-label="Close dialog" onClick={close}><X size={20} /></button></div>
+    <div className={`modal${language ? ' sources-modal' : ''}`} lang={language} dir={language === 'ur' ? 'rtl' : undefined}
+      role="dialog" aria-modal="true" aria-labelledby="modal-title" ref={ref}>
+      <div className="modal-heading"><div><span className="eyebrow">{eyebrow}</span><h2 id="modal-title">{title}</h2></div>
+        <button className="icon-button" aria-label={language === 'ur' ? 'بند کریں' : 'Close dialog'} onClick={close}><X size={20} /></button></div>
       {children}
     </div>
   </div>;
+}
+
+function SourcesModal({ words, close }: { words: number; close: () => void }) {
+  const [language, setLanguage] = useState<'ur' | 'en'>('ur');
+  const copy = aboutDataCopy[language];
+  const wordCount = new Intl.NumberFormat(language === 'ur' ? 'ur-u-nu-arabext' : 'en').format(words);
+  return <Modal title={copy.title} close={close} language={language} eyebrow={copy.eyebrow}>
+    <div className="source-language" role="group" aria-label="About the data language" dir="ltr">
+      <button lang="ur" className="urdu" aria-pressed={language === 'ur'} onClick={() => setLanguage('ur')}>اردو</button>
+      <button lang="en" aria-pressed={language === 'en'} onClick={() => setLanguage('en')}>English</button>
+    </div>
+    <p className="modal-intro">{copy.intro}</p>
+    <div className="approach-card"><Leaf size={23} /><div><h3>{copy.approachTitle}</h3><p>{copy.approach}</p></div></div>
+    <div className="source-list">{copy.sources.map((source, i) => <article key={i}>
+      <span aria-hidden="true">{new Intl.NumberFormat(language === 'ur' ? 'ur-u-nu-arabext' : 'en', { minimumIntegerDigits: 2 }).format(i + 1)}</span>
+      <div><h3>{source.title}</h3><p>{source.description.replace('{words}', wordCount)}</p>
+        {source.links.map((link) => <a href={link.url} target="_blank" rel="noreferrer" key={link.url}>
+          {link.label}<ArrowRight size={13} /></a>)}
+      </div>
+    </article>)}</div>
+    <p className="source-note"><Info size={16} /><span>{copy.note}</span></p>
+  </Modal>;
 }
 
 function SurahPicker({ surahs, selected, change }: { surahs: Surah[]; selected: number; change: (id: number) => void }) {
@@ -96,15 +122,39 @@ function RootMeaning({ root }: { root: string }) {
         <details className="dictionary-citation"><summary>Dictionary source & original text <ChevronDown size={13} /></summary>
           <p className="dictionary-source-title">{source.title}</p>
           <p className="dictionary-note">The Urdu summary is AI-assisted and has not received specialist review. The excerpts below are original dictionary text, with entry IDs for checking the complete entries.</p>
-          {definition.entries.map((entry) => <div className="dictionary-excerpt" key={entry.id}>
-            <div className="dictionary-entry-label"><span className="arabic" dir="rtl" lang="ar">{entry.headword}</span>
-              <span>{entry.page ? `p. ${entry.page} · ` : ''}Entry {entry.id}</span></div>
-            {entry.glosses.length > 0 && <p className="dictionary-glosses" lang="en">{entry.glosses.join(' · ')}</p>}
+          <p className="dictionary-context urdu" dir="rtl" lang="ur">یہ اسی مادے سے متعلق مختلف الفاظ کے اقتباسات ہیں۔ ہر لفظ کی اپنی لغوی صورت اور معنی دیکھیں۔</p>
+          <details className="dictionary-reading-guide" dir="rtl" lang="ur">
+            <summary><BookOpen size={14} /><span className="urdu">اس لغت کو کیسے پڑھیں؟</span><ChevronDown size={13} /></summary>
+            <div className="urdu"><ol>
+              <li>عربی عنوان بتاتا ہے کہ اقتباس کس لفظ کے بارے میں ہے۔ یہ منتخب لفظ سے مختلف بھی ہو سکتا ہے۔</li>
+              <li>پہلے اصل عبارت میں معنی پڑھیں۔ شروع کی فعلی صورتیں اور قوسین میں حوالہ جات بعد میں دیکھ سکتے ہیں۔</li>
+              <li>معنی کے استخراج شدہ ٹکڑوں میں نقطے الگ حصوں کو جدا کرتے ہیں؛ انہیں مسلسل جملہ نہ سمجھیں۔</li>
+            </ol>
+              <dl><dt><bdi lang="en">aor.</bdi></dt><dd>فعل کی مضارع صورت</dd>
+                <dt><bdi lang="en">inf. n.</bdi></dt><dd>مصدر</dd>
+                <dt><bdi lang="en">pl.</bdi></dt><dd>جمع</dd>
+                <dt><bdi lang="en">contr. of</bdi></dt><dd>متضاد معنی</dd>
+                <dt><bdi lang="en">tropical</bdi></dt><dd>مجازی استعمال</dd>
+                <dt><bdi lang="en">see</bdi></dt><dd>دوسرے اندراج کا حوالہ</dd>
+                <dt><bdi lang="en">S, M, K…</bdi></dt><dd>مصنف کی استعمال کردہ لغات کے مختصر نام</dd>
+              </dl>
+            </div>
+          </details>
+          {definition.entries.map((entry, i) => <article className="dictionary-excerpt" key={entry.id}>
+            <div className="dictionary-entry-label"><span className="dictionary-entry-number" aria-hidden="true">{i + 1}</span>
+              <span className="arabic" dir="rtl" lang="ar">{entry.headword}</span></div>
+            <div className="dictionary-entry-reference" lang="en" dir="ltr">
+              {entry.page && <span>Page {entry.page}</span>}<span>Entry <bdi>{entry.id}</bdi></span></div>
+            {entry.glosses.length > 0 && <><p className="dictionary-text-label" lang="en">Extracted meaning fragments</p>
+              <p className="dictionary-glosses" lang="en" dir="ltr">{entry.glosses.join(' · ')}</p></>}
+            <p className="dictionary-text-label" lang="en">Original dictionary passage</p>
             <blockquote className={source.language === 'ar' ? 'arabic' : ''} dir={source.language === 'ar' ? 'rtl' : 'ltr'} lang={source.language}>
               {entry.excerpt}{entry.truncated ? '…' : ''}
             </blockquote>
-          </div>)}
+            {entry.truncated && <p className="dictionary-truncation urdu" lang="ur" dir="rtl">یہ اقتباس مکمل اندراج کا ابتدائی حصہ ہے؛ … باقی عبارت کی علامت ہے۔</p>}
+          </article>)}
           <a href={source.url} target="_blank" rel="noreferrer">Pinned source database <ArrowRight size={12} /></a>
+          <p className="dictionary-download-note urdu" lang="ur" dir="rtl">یہ ربط اصل ڈیٹابیس کی فائل ڈاؤن لوڈ کرتا ہے۔ صفحہ نمبر اور اندراج کی شناخت اصل ماخذ میں تلاش کے لیے ہیں۔</p>
         </details>
       </>}
   </section>;
@@ -365,15 +415,16 @@ export default function App() {
       <button className="brand" onClick={() => navigate(7, 179)} aria-label="Qexplore home"><span className="brand-mark"><BookOpen size={22} strokeWidth={1.7} /></span><span>Qexplore<span className="brand-dot">.</span></span></button>
       <nav className="header-nav" aria-label="Main navigation"><button className={!dialog ? 'active' : ''} onClick={() => setDialog(null)}><BookOpen size={16} />Explore</button>
         <button className={dialog === 'saved' ? 'active' : ''} onClick={() => setDialog('saved')}><Bookmark size={16} />Saved{savedVerses.length + savedWords.length > 0 && <span className="count-pill">{savedVerses.length + savedWords.length}</span>}</button></nav>
-      <div className="header-actions"><button className="source-button" onClick={() => setDialog('sources')}><CircleHelp size={17} /><span>About the data</span></button>
+      <div className="header-actions"><button className="source-button" aria-label="About the data" onClick={() => setDialog('sources')}><CircleHelp size={17} /><span>About the data</span></button>
         <span className="header-divider" /><button className="icon-button" title={theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'} aria-label={theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'}
           onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}>{theme === 'light' ? <Moon size={19} /> : <Sun size={19} />}</button></div>
     </div></header>
 
     <main className="page">
-      <section className="intro"><div><div className="eyebrow intro-eyebrow"><span className="tiny-line" />A QUIET SPACE FOR UNDERSTANDING</div>
-        <h1>Every word, <em>closer.</em></h1><p>Explore the Arabic. Discover the roots. Understand in your own way.</p></div>
-        <div className="intro-note"><span className="note-symbol"><Leaf size={23} strokeWidth={1.3} /></span><p>Read at your own pace.<br /><strong>Let the words speak.</strong></p></div>
+      <section className="intro intro-urdu"><div className="intro-copy" lang="ur" dir="rtl">
+        <h1>ہر لفظ کی <em>جستجو۔</em></h1><p>قرآن کے ہر لفظ کا مادہ، لغوی معنی اور لفظی ترجمہ جانیں۔</p></div>
+        <div className="intro-note"><span className="note-symbol"><Leaf size={23} strokeWidth={1.3} /></span>
+          <p lang="ur" dir="rtl">اپنی رفتار سے مطالعہ کریں۔<br /><strong>لفظوں کو بولنے دیں۔</strong></p></div>
       </section>
 
       <div className="workspace">
@@ -433,20 +484,11 @@ export default function App() {
             </>}
         </section>
       </div>
-      <footer className="page-footer"><span><span className="footer-mark"><BookOpen size={15} /></span>Made for thoughtful, independent reading.</span><div><span>114 surahs</span><span className="middle-dot">·</span><span>{format.format(boot.metadata.verses)} ayahs</span><button onClick={() => setDialog('sources')}>Sources & approach <ArrowRight size={12} /></button></div></footer>
+      <footer className="page-footer"><span className="footer-purpose urdu" lang="ur" dir="rtl"><span className="footer-mark"><BookOpen size={15} /></span>جستجو اور تحقیق کے ساتھ مطالعے کے لیے۔</span><div><span>114 surahs</span><span className="middle-dot">·</span><span>{format.format(boot.metadata.verses)} ayahs</span><button onClick={() => setDialog('sources')}>Sources & approach <ArrowRight size={12} /></button></div></footer>
     </main>
     {toast && <div className="toast" role="status"><Check size={17} />{toast}</div>}
 
-    {dialog === 'sources' && <Modal title="The words, and where they come from." close={closeDialog}>
-      <p className="modal-intro">Qexplore is an independent language tool. It presents Arabic text, Urdu word glosses, and morphology so you can read and examine the language yourself.</p>
-      <div className="approach-card"><Leaf size={23} /><div><h3>A space for your own understanding</h3><p>No tafsir, doctrinal commentary, generated interpretation, religious affiliation, or ideological conclusions are added.</p></div></div>
-      <div className="source-list"><article><span>01</span><div><h3>Arabic text & Urdu word glosses</h3><p>Greentech Apps Foundation word-by-word corpus, preserved as provided, via the QuranicWords reference dataset. All {format.format(boot.metadata.words)} written words across 6,236 ayahs are available locally.</p><a href="https://github.com/rmrashahriar/QuranicWords/tree/635f923a990c41add1df0d57e8bf96b2d18c6077/reference/word-by-word" target="_blank" rel="noreferrer">View the pinned word corpus <ArrowRight size={13} /></a></div></article>
-        <article><span>02</span><div><h3>Roots, dictionary forms & grammar</h3><p>Quranic Arabic Corpus v0.4 (University of Leeds), through the corrected mustafa0x morphology fork. Particles, pronouns, proper names, and other words may have no assigned root.</p><a href="https://corpus.quran.com/" target="_blank" rel="noreferrer">Quranic Arabic Corpus <ArrowRight size={13} /></a></div></article>
-        <article><span>03</span><div><h3>Root family meanings</h3><p>QuranicWords 1.0.0 Urdu lemma glosses, plus cited occurrence glosses where a lexical entry is unavailable. Extracted entries awaiting review are marked. These are attested meanings of related words, rather than an exhaustive dictionary definition of the root.</p><a href="https://github.com/rmrashahriar/QuranicWords/tree/635f923a990c41add1df0d57e8bf96b2d18c6077/dataset" target="_blank" rel="noreferrer">View the lexical dataset <ArrowRight size={13} /></a></div></article>
-        <article><span>04</span><div><h3>General root meanings in Urdu</h3><p>A separate dictionary section gives selected general senses from Lane’s Arabic-English Lexicon, with Maqayis al-Lugha and Lisan al-Arab filling gaps. These are Qexplore’s AI-assisted, concise Urdu renderings of classical dictionary entries, not a published Urdu edition or a specialist-reviewed translation. Original excerpts and entry citations accompany each root. Two unresolved analyses are marked.</p><a href="https://github.com/laneslexicon/LexiconDatabase/tree/b371ab16b963def3085674a516e5f45d9c787b1d" target="_blank" rel="noreferrer">Lane’s source database <ArrowRight size={13} /></a><a href="https://github.com/wizsk/arabic_lexicons/tree/a34dc0aaa4e45ff245a9bc7213747838c6e51b5a" target="_blank" rel="noreferrer">Classical Arabic source databases <ArrowRight size={13} /></a></div></article>
-        <article><span>05</span><div><h3>Typography & privacy</h3><p>Urdu uses locally bundled Jameel Noori Nastaleeq; Arabic uses Scheherazade New. Saved ayahs, words, and settings stay in this browser. No account, analytics, or runtime AI service is used.</p></div></article></div>
-      <p className="source-note"><Info size={16} /><span>Word glosses reflect their source’s translation choices. Arabic roots can have multiple senses, and a root’s meaning alone does not establish a word’s meaning in a sentence. Source attribution does not imply affiliation.</span></p>
-    </Modal>}
+    {dialog === 'sources' && <SourcesModal words={boot.metadata.words} close={closeDialog} />}
 
     {dialog === 'saved' && <Modal title="Your collection." close={closeDialog}>
       <p className="modal-intro">A little space for the ayahs and words you want to return to. Saved in this browser.</p>

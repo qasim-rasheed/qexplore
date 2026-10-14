@@ -1,0 +1,72 @@
+.intro-urdu .intro-copy { min-width: 0; }
+.intro.intro-urdu { padding-top: 29px; padding-bottom: 29px; }
+.intro.intro-urdu h1 {
+  font-family: 'Jameel Noori Nastaleeq', serif;
+  font-size: 48px;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.9;
+}
+.intro.intro-urdu h1 em { font-style: normal; }
+.intro.intro-urdu .intro-copy > p {
+  font-family: 'Jameel Noori Nastaleeq', serif;
+  font-size: 23px;
+  line-height: 2.1;
+  margin-top: 3px;
+  max-width: 640px;
+}
+.intro.intro-urdu .intro-note > p {
+  font-family: 'Jameel Noori Nastaleeq', serif;
+  font-size: 22px;
+  line-height: 2.2;
+}
+.page-footer .footer-purpose { font-size: 19px; line-height: 2.2; gap: 10px; }
+.sources-modal .source-language {
+  display: flex;
+  width: fit-content;
+  gap: 4px;
+  padding: 4px;
+  margin: 0 0 22px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--soft);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.source-language button {
+  min-width: 80px;
+  min-height: 39px;
+  border-radius: 4px;
+  padding: 5px 15px;
+  font-family: Inter, 'Segoe UI', Arial, sans-serif;
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--muted);
+}
+.source-language button.urdu { font-family: 'Jameel Noori Nastaleeq', serif; font-size: 22px; line-height: 1.6; }
+.source-language button[aria-pressed=true] { background: var(--green); color: var(--card); }
+.sources-modal .source-list article > div { min-width: 0; }
+.sources-modal .source-list a { display: flex; width: fit-content; overflow-wrap: anywhere; }
+.sources-modal .source-list svg, .sources-modal .approach-card > svg, .sources-modal .source-note > svg { flex-shrink: 0; }
+.sources-modal[lang=ur] { font-family: 'Jameel Noori Nastaleeq', serif; }
+.sources-modal[lang=ur] .modal-heading h2 { font-family: inherit; font-size: 34px; font-weight: 400; line-height: 1.9; letter-spacing: 0; margin-top: 0; }
+.sources-modal[lang=ur] .modal-heading .eyebrow { font-size: 18px; line-height: 1.8; letter-spacing: 0; }
+.sources-modal[lang=ur] .modal-intro { font-size: 22px; line-height: 2.2; }
+.sources-modal[lang=ur] .approach-card h3, .sources-modal[lang=ur] .source-list h3 { font-size: 25px; line-height: 1.9; font-weight: 400; margin-bottom: 6px; }
+.sources-modal[lang=ur] .approach-card p, .sources-modal[lang=ur] .source-list p { font-size: 21px; line-height: 2.25; }
+.sources-modal[lang=ur] .source-list article > span { font-family: inherit; font-size: 24px; line-height: 1.9; }
+.sources-modal[lang=ur] .source-list a { font-size: 20px; line-height: 2; }
+.sources-modal[lang=ur] .source-list a > svg { transform: rotate(180deg); }
+.sources-modal[lang=ur] .source-note { font-size: 20px; line-height: 2.2; }
+.sources-modal[lang=ur] .approach-card > svg, .sources-modal[lang=ur] .source-note > svg { margin-top: 10px; }
+@media (max-width: 680px) {
+  .intro.intro-urdu { padding-top: 18px; padding-bottom: 23px; }
+  .intro.intro-urdu h1 { font-size: 40px; }
+  .intro.intro-urdu .intro-copy > p { font-size: 21px; max-width: 100%; }
+  .page-footer .footer-purpose { font-size: 18px; }
+  .sources-modal[lang=ur] .modal-heading h2 { font-size: 30px; }
+  .sources-modal[lang=ur] .modal-intro { font-size: 21px; }
+  .sources-modal[lang=ur] .source-list p, .sources-modal[lang=ur] .approach-card p { font-size: 20px; }
+  .sources-modal[lang=ur] .source-list article { gap: 12px; }
+}

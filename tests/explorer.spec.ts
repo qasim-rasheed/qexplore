@@ -16,6 +16,54 @@ test('reads the requested verse with local Urdu typography and no external API r
   expect(destinations.every((origin) => origin === 'http://127.0.0.1:3000')).toBe(true);
 });
 
+test('opens source information in Urdu and switches all source copy and direction to English', async ({ page }) => {
+  const open = page.getByRole('button', { name: 'About the data', exact: true });
+  await open.click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toHaveAttribute('lang', 'ur');
+  await expect(dialog).toHaveAttribute('dir', 'rtl');
+  await expect(page.locator('#modal-title')).toHaveText('الفاظ اور ان کے ماخذ');
+  await expect(dialog.getByRole('button', { name: 'اردو', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(dialog.locator('.source-list article')).toHaveCount(5);
+  await expect(dialog.locator('.source-list')).toContainText('مصنوعی ذہانت کی مدد سے');
+  const links = await dialog.locator('.source-list a').evaluateAll((els) => els.map((el) => el.getAttribute('href')));
+  await dialog.getByRole('button', { name: 'English', exact: true }).click();
+  await expect(dialog).toHaveAttribute('lang', 'en');
+  await expect(dialog).not.toHaveAttribute('dir', 'rtl');
+  await expect(page.locator('#modal-title')).toHaveText('The words, and where they come from.');
+  await expect(dialog.locator('.source-list')).toContainText('AI-assisted');
+  expect(await dialog.locator('.source-list a').evaluateAll((els) => els.map((el) => el.getAttribute('href')))).toEqual(links);
+  await dialog.getByRole('button', { name: 'اردو', exact: true }).click();
+  await expect(dialog).toHaveAttribute('dir', 'rtl');
+  await page.evaluate(() => document.fonts.ready);
+  expect(await dialog.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+  await dialog.getByRole('button', { name: 'بند کریں', exact: true }).click();
+  await expect(open).toBeFocused();
+  await page.getByRole('button', { name: 'Sources & approach', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveAttribute('lang', 'ur');
+});
+
+test('adds dictionary reading guidance while preserving every displayed original excerpt and fragment', async ({ page }) => {
+  await page.locator('.word-card').nth(8).click();
+  await page.getByText('Dictionary source & original text', { exact: true }).click();
+  const dictionary = await (await page.request.get('/data/root-definitions.json')).json();
+  const entries = dictionary.roots['قلب'].entries;
+  await expect(page.locator('.dictionary-excerpt')).toHaveCount(entries.length);
+  for (let i = 0; i < entries.length; i++) {
+    const card = page.locator('.dictionary-excerpt').nth(i);
+    await expect(card.locator('blockquote')).toHaveText(entries[i].excerpt + (entries[i].truncated ? '…' : ''));
+    if (entries[i].glosses.length) await expect(card.locator('.dictionary-glosses')).toHaveText(entries[i].glosses.join(' · '));
+    await expect(card.locator('.dictionary-entry-reference')).toContainText(entries[i].id);
+  }
+  await page.getByText('اس لغت کو کیسے پڑھیں؟', { exact: true }).click();
+  await expect(page.locator('.dictionary-reading-guide')).toHaveAttribute('open');
+  await expect(page.locator('.dictionary-reading-guide')).toContainText('منتخب لفظ سے مختلف');
+  await expect(page.locator('.dictionary-reading-guide dd')).toContainText(['فعل کی مضارع صورت', 'مصدر', 'جمع']);
+  await expect(page.locator('.dictionary-download-note')).toContainText('فائل ڈاؤن لوڈ');
+  await page.evaluate(() => document.fonts.ready);
+  expect(await page.locator('.root-panel').evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+});
+
 test('accepts numeric, Urdu-digit, and named references', async ({ page }) => {
   const input = page.getByLabel('Jump to a reference');
   await input.fill('۲:۲۸۶'); await input.press('Enter');

@@ -35,6 +35,8 @@ For example, `قلب` has general senses including **پلٹنا، الٹنا؛ �
 
 The in-app **About the data** dialog provides sources and these distinctions. Historical dictionary excerpts retain their original wording and may mention historical usage or religious vocabulary. The app adds no conclusions about how an ayah should be interpreted. No upstream full-verse translations or tafsir datasets are imported.
 
+The introduction, leaf note, and reading-purpose footer use Urdu in Jameel Noori Nastaleeq. **About the data** opens in Urdu and includes an Urdu/English toggle for the full dialog. The dictionary section labels extracted meaning fragments separately from the original passage, shows page/entry references clearly, and provides a collapsible Urdu reading guide for dictionary notation. Original source excerpts and fragments remain unchanged.
+
 ## Verification
 
 ```bash
