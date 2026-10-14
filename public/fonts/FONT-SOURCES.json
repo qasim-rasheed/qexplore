@@ -1,0 +1,8 @@
+{
+  "jameel-noori-nastaleeq.woff2": {
+    "source": "https://raw.githubusercontent.com/hafizrahmat786/jameel-noori-nastaleeq-regular/c1662015db4b601ecafe7fc1858d6332c44fb196/Jameel%20Noori%20Nastaleeq%20Regular.ttf",
+    "source_sha256": "39c54f1646a6a4f68408f3a26400e457cb1e52226c284d8c4ab36a3363520e0f",
+    "woff2_sha256": "550ca5660a19ba81b89510c4c840c4bb5ac860bc6be71686397c3d422c0ec46e",
+    "repacked_with": "fontTools.ttLib.TTFont with Brotli 1.2.0"
+  }
+}
