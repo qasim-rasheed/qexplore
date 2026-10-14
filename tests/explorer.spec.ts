@@ -55,20 +55,64 @@ test('rejects invalid references and keeps the reader’s place', async ({ page 
 test('shows the actual root, Urdu lemma meanings, and words without roots', async ({ page }) => {
   await page.locator('.word-card').nth(8).click();
   await expect(page.locator('.root-letters')).toHaveText('قلب');
+  await expect(page.locator('.root-definition-urdu')).toContainText('پلٹنا');
   await expect(page.locator('.root-forms .urdu').first()).toHaveText('دل');
   await expect(page.locator('.lemma-row')).toContainText('قَلْب');
   await expect(page.locator('.pos-badge')).toHaveText('Noun');
   await page.getByRole('button', { name: 'Next word', exact: true }).click();
   await expect(page.locator('.selected-word')).toContainText('WORD 10 OF 30');
   await expect(page.locator('.no-root')).toContainText('does not assign it a root');
+  await expect(page.locator('.root-definition')).toHaveCount(0);
   await page.getByRole('button', { name: 'Next word', exact: true }).click();
   await expect(page.locator('.root-letters')).toHaveText('فقه');
+  await expect(page.locator('.root-definition-urdu')).toContainText('سمجھنا');
   await expect(page.locator('.pos-badge')).toHaveText('Verb');
   await page.getByRole('button', { name: 'Previous word', exact: true }).click();
   await expect(page.locator('.selected-word')).toContainText('WORD 10 OF 30');
   await page.getByRole('button', { name: 'Close word details', exact: true }).click();
   await expect(page.locator('.root-panel')).toHaveCount(0);
   await expect(page.locator('.verse-card-footer')).toContainText('7:179');
+});
+
+test('keeps general root senses separate from verse glosses and provides original dictionary evidence', async ({ page }) => {
+  await page.locator('.word-card').nth(8).click();
+  await expect(page.locator('.selected-word .urdu')).toHaveText('دل ہیں');
+  await expect(page.getByRole('region', { name: 'Root meaning in Urdu' })).toBeVisible();
+  await expect(page.locator('.root-definition-urdu')).toContainText('حالت بدلنا');
+  await page.getByText('Dictionary source & original text', { exact: true }).click();
+  await expect(page.locator('.dictionary-source-title')).toContainText('Lane');
+  await expect(page.locator('.dictionary-citation')).toContainText('2552');
+  await expect(page.locator('.dictionary-excerpt').first()).toContainText('He altered');
+  await expect(page.locator('.dictionary-citation')).toContainText('AI-assisted');
+  await page.getByRole('button', { name: 'Next word', exact: true }).click();
+  await page.getByRole('button', { name: 'Next word', exact: true }).click();
+  await expect(page.locator('.root-definition-urdu')).toContainText('سمجھنا');
+  await expect(page.locator('.dictionary-citation')).not.toHaveAttribute('open');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test('recovers a failed dictionary request without blocking the word explorer', async ({ page }) => {
+  await page.route('**/data/root-definitions.json', (route) => route.abort());
+  await page.locator('.word-card').nth(8).click();
+  await expect(page.locator('.root-definition')).toContainText('could not be loaded');
+  await expect(page.locator('.root-forms .urdu').first()).toHaveText('دل');
+  await page.unroute('**/data/root-definitions.json');
+  await page.getByRole('button', { name: 'Retry root dictionary', exact: true }).click();
+  await expect(page.locator('.root-definition-urdu')).toContainText('پلٹنا');
+});
+
+test('marks unresolved root analyses instead of substituting the verse gloss', async ({ page }) => {
+  const dictionary = await (await page.request.get('/data/root-definitions.json')).json();
+  const index = await (await page.request.get('/data/root-index.json')).json();
+  for (const root of ['همن', 'كين']) {
+    expect(dictionary.roots[root].u).toBeNull();
+    const uses = await (await page.request.get(`/data/roots/${index[root].id}.json`)).json();
+    const use = uses.uses[0];
+    await page.goto(`/#${use.s}:${use.v}:${use.w}`);
+    await expect(page.locator('.root-letters')).toHaveText(root);
+    await expect(page.locator('.root-definition')).toContainText('Root analysis needs review');
+    await expect(page.locator('.root-definition-urdu')).toContainText('تصدیق طلب');
+  }
 });
 
 test('navigates root occurrences and returns to the selected word with browser back', async ({ page }) => {

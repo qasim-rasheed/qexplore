@@ -1,7 +1,9 @@
 """Check the complete corpus and every root occurrence, rather than just sample verses."""
 import collections
 import hashlib
+import importlib.util
 import json
+import sqlite3
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -59,6 +61,48 @@ assert chapters[7][178][8]['u'] == 'دل ہیں'
 assert chapters[7][178][8]['p'] == 'N'
 assert chapters[7][178][10]['p'] == 'V'
 assert chapters[7][178][9]['r'] == []
+# Root definitions are a separate editorial dataset, never verse-word glosses.
+dictionary = load(DATA / 'root-definitions.json')
+definitions = dictionary['roots']
+assert definitions.keys() == index.keys()
+citations = load(ROOT / 'data' / 'root-dictionary-citations.json')
+urdu = dict(line.split('\t') for line in (ROOT / 'data' / 'root-meanings-ur.tsv').read_text().splitlines()
+            if line and not line.startswith('#'))
+assert urdu.keys() == definitions.keys() == citations.keys()
+for root, definition in definitions.items():
+    assert definition['status'] in ('rendered', 'uncertain')
+    assert definition['source'] == citations[root]['source']
+    assert definition['source'] in dictionary['sources']
+    assert [entry['id'] for entry in definition['entries']] == citations[root]['entries']
+    assert all(entry['headword'] and entry['dictionaryRoot'] and entry['excerpt']
+               for entry in definition['entries'])
+    if definition['status'] == 'rendered':
+        assert definition['u'] == urdu[root]
+    else:
+        assert definition['u'] is None and definition['note']
+assert {r for r, d in definitions.items() if d['status'] == 'uncertain'} == {'كين', 'همن'}
+assert 'پلٹنا' in definitions['قلب']['u'] and 'دل' in definitions['قلب']['u']
+assert 'لکھنا' in definitions['كتب']['u']
+assert 'بھولنا' not in definitions['نسو']['u'] and 'عورتیں' in definitions['نسو']['u']
+assert definitions['زلزل']['entries'][0]['id'] == 'n17946'
+assert definitions['نون']['entries'][0]['id'] == '4798'
+assert definitions['هدهد']['entries'][1]['id'] == 'n40970'
+dictionary_cache = ROOT / '.cache' / 'dictionaries'
+dictionary_lock = load(ROOT / 'scripts' / 'dictionary-sources-lock.json')
+if all((dictionary_cache / name.replace('.zip', '.sqlite')).exists() and
+       (dictionary_cache / name).exists() for name in dictionary_lock):
+    for name, spec in dictionary_lock.items():
+        assert hashlib.sha256((dictionary_cache / name).read_bytes()).hexdigest() == spec['sha256']
+    module_spec = importlib.util.spec_from_file_location('dictionary_builder', ROOT / 'scripts' / 'build-dictionary.py')
+    builder = importlib.util.module_from_spec(module_spec)
+    module_spec.loader.exec_module(builder)
+    databases = {}
+    for name in dictionary_lock:
+        db = sqlite3.connect(f'file:{dictionary_cache / name.replace(".zip", ".sqlite")}?mode=ro', uri=True)
+        db.row_factory = sqlite3.Row
+        databases[name] = db
+    assert builder.compile_records(databases) == dictionary, 'Dictionary excerpts or citations differ from pinned entries.'
+    print('Verified every root dictionary excerpt and entry ID against the pinned classical databases.')
 # When the raw corpus cache exists, verify source checksums and every displayed token.
 lock = load(ROOT / 'scripts' / 'sources-lock.json')
 cache = ROOT / '.cache' / 'sources'

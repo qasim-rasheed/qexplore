@@ -4,7 +4,8 @@ import { ArrowLeft, ArrowRight, Bookmark, BookOpen, Check, ChevronDown, ChevronL
   ChevronRight, CircleHelp, Copy, GitBranch, Info, Leaf, LoaderCircle, Moon, Search, SlidersHorizontal,
   Sun, X } from 'lucide-react';
 import { getData, normalise, parseReference, posLabel, readRoute, readStorage, validateRoute, westernDigits, writeStorage } from './lib';
-import type { Metadata, RootData, RootIndex, Route, SavedWord, Surah, Word } from './types';
+import type { Metadata, RootData, RootDictionary, RootIndex, Route, SavedWord, Surah, Word } from './types';
+import './dictionary.css';
 
 type Dialog = 'sources' | 'saved' | 'settings' | null;
 type Boot = { surahs: Surah[]; roots: RootIndex; metadata: Metadata };
@@ -67,11 +68,54 @@ function SurahPicker({ surahs, selected, change }: { surahs: Surah[]; selected: 
   </div>;
 }
 
+function RootMeaning({ root }: { root: string }) {
+  const [dictionary, setDictionary] = useState<RootDictionary | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [retry, setRetry] = useState(0);
+  useEffect(() => {
+    let active = true;
+    setFailed(false);
+    getData<RootDictionary>('/data/root-definitions.json')
+      .then((value) => { if (active) setDictionary(value); })
+      .catch(() => { if (active) setFailed(true); });
+    return () => { active = false; };
+  }, [retry]);
+  const definition = dictionary?.roots[root];
+  const source = definition && dictionary?.sources[definition.source];
+  return <section className="root-definition" aria-label="Root meaning in Urdu" aria-live="polite">
+    <div className="section-label"><span>ROOT MEANING IN URDU</span><span className="urdu" lang="ur" dir="rtl">لغوی معنی</span></div>
+    {failed ? <div className="inline-error"><p>The root dictionary could not be loaded.</p>
+      <button onClick={() => setRetry(retry + 1)}>Retry root dictionary</button></div>
+      : !dictionary ? <div className="dictionary-loading"><LoaderCircle className="spin" size={14} /> Loading dictionary…</div>
+      : !definition || !source ? <p className="dictionary-note">No independent dictionary definition is available for this root.</p>
+      : <>
+        {definition.u ? <p className="root-definition-urdu urdu" lang="ur" dir="rtl">{definition.u}</p>
+          : <p className="root-definition-urdu urdu" lang="ur" dir="rtl">اس مادے کا عمومی لغوی معنی ابھی تصدیق طلب ہے</p>}
+        <p className="dictionary-note">{definition.status === 'uncertain' ? 'Root analysis needs review.' : 'General senses · AI-assisted Urdu rendering'}</p>
+        {definition.note && <p className="dictionary-note dictionary-analysis">{definition.note}</p>}
+        <details className="dictionary-citation"><summary>Dictionary source & original text <ChevronDown size={13} /></summary>
+          <p className="dictionary-source-title">{source.title}</p>
+          <p className="dictionary-note">The Urdu summary is AI-assisted and has not received specialist review. The excerpts below are original dictionary text, with entry IDs for checking the complete entries.</p>
+          {definition.entries.map((entry) => <div className="dictionary-excerpt" key={entry.id}>
+            <div className="dictionary-entry-label"><span className="arabic" dir="rtl" lang="ar">{entry.headword}</span>
+              <span>{entry.page ? `p. ${entry.page} · ` : ''}Entry {entry.id}</span></div>
+            {entry.glosses.length > 0 && <p className="dictionary-glosses" lang="en">{entry.glosses.join(' · ')}</p>}
+            <blockquote className={source.language === 'ar' ? 'arabic' : ''} dir={source.language === 'ar' ? 'rtl' : 'ltr'} lang={source.language}>
+              {entry.excerpt}{entry.truncated ? '…' : ''}
+            </blockquote>
+          </div>)}
+          <a href={source.url} target="_blank" rel="noreferrer">Pinned source database <ArrowRight size={12} /></a>
+        </details>
+      </>}
+  </section>;
+}
+
 function RootPanel({ word, position, count, rootIndex, navigateWord, navigate, saved, saveWord, close }: {
   word: Word; position: number; count: number; rootIndex: RootIndex; navigateWord: (w: number) => void;
   navigate: (s: number, v: number, w?: number) => void; saved: boolean; saveWord: () => void; close: () => void;
 }) {
-  const [root, setRoot] = useState(word.r[0] || '');
+  const [rootChoice, setRootChoice] = useState<{ word: Word; root: string } | null>(null);
+  const root = rootChoice?.word === word ? rootChoice.root : word.r[0] || '';
   const [data, setData] = useState<RootData | null>(null);
   const [error, setError] = useState('');
   const [tab, setTab] = useState<'meanings' | 'uses'>('meanings');
@@ -93,7 +137,7 @@ function RootPanel({ word, position, count, rootIndex, navigateWord, navigate, s
     panel.current?.querySelector<HTMLButtonElement>('button')?.focus();
     return () => { document.body.style.overflow = oldOverflow; previous?.focus(); };
   }, [mobile]);
-  useEffect(() => { setRoot(word.r[0] || ''); setTab('meanings'); setPage(0); }, [word]);
+  useEffect(() => { setTab('meanings'); setPage(0); panel.current?.scrollTo({ top: 0 }); }, [word]);
   useEffect(() => {
     let active = true;
     setData(null); setError(''); setPage(0);
@@ -121,10 +165,11 @@ function RootPanel({ word, position, count, rootIndex, navigateWord, navigate, s
       <button disabled={position === count} onClick={() => navigateWord(position + 1)}>Next word <ChevronRight size={15} /></button></div>
     <div className="root-section"><div className="section-label"><span>ROOT LETTERS</span><span className="urdu" lang="ur">مادہ</span></div>
       {root ? <><div className="root-letters" dir="rtl" lang="ar">{Array.from(root).map((letter, i) => <span key={i}>{letter}</span>)}</div>
-        {word.r.length > 1 && <div className="root-choices">{word.r.map((value) => <button className={root === value ? 'active' : ''} onClick={() => setRoot(value)} key={value}>{value}</button>)}</div>}
+        {word.r.length > 1 && <div className="root-choices">{word.r.map((value) => <button className={root === value ? 'active' : ''} onClick={() => setRootChoice({ word, root: value })} key={value}>{value}</button>)}</div>}
       </> : <div className="no-root"><span className="urdu" lang="ur" dir="rtl">اس لفظ کا مادہ درج نہیں ہے</span><p>This is a {posLabel(word.p).toLowerCase()}. The morphology source does not assign it a root.</p></div>}
       {word.l && <div className="lemma-row"><span>Dictionary form</span><span className="arabic" lang="ar" dir="rtl">{word.l}</span></div>}
     </div>
+    {root && <RootMeaning root={root} key={root} />}
     {root && <div className="root-content"><div className="detail-tabs" role="tablist" aria-label="Root information">
       <button role="tab" aria-selected={tab === 'meanings'} onClick={() => setTab('meanings')}>Root family meanings</button>
       <button role="tab" aria-selected={tab === 'uses'} onClick={() => setTab('uses')}>Uses <span>{format.format(rootIndex[root]?.count || 0)}</span></button></div>
@@ -398,7 +443,8 @@ export default function App() {
       <div className="source-list"><article><span>01</span><div><h3>Arabic text & Urdu word glosses</h3><p>Greentech Apps Foundation word-by-word corpus, preserved as provided, via the QuranicWords reference dataset. All {format.format(boot.metadata.words)} written words across 6,236 ayahs are available locally.</p><a href="https://github.com/rmrashahriar/QuranicWords/tree/635f923a990c41add1df0d57e8bf96b2d18c6077/reference/word-by-word" target="_blank" rel="noreferrer">View the pinned word corpus <ArrowRight size={13} /></a></div></article>
         <article><span>02</span><div><h3>Roots, dictionary forms & grammar</h3><p>Quranic Arabic Corpus v0.4 (University of Leeds), through the corrected mustafa0x morphology fork. Particles, pronouns, proper names, and other words may have no assigned root.</p><a href="https://corpus.quran.com/" target="_blank" rel="noreferrer">Quranic Arabic Corpus <ArrowRight size={13} /></a></div></article>
         <article><span>03</span><div><h3>Root family meanings</h3><p>QuranicWords 1.0.0 Urdu lemma glosses, plus cited occurrence glosses where a lexical entry is unavailable. Extracted entries awaiting review are marked. These are attested meanings of related words, rather than an exhaustive dictionary definition of the root.</p><a href="https://github.com/rmrashahriar/QuranicWords/tree/635f923a990c41add1df0d57e8bf96b2d18c6077/dataset" target="_blank" rel="noreferrer">View the lexical dataset <ArrowRight size={13} /></a></div></article>
-        <article><span>04</span><div><h3>Typography & privacy</h3><p>Urdu uses locally bundled Jameel Noori Nastaleeq; Arabic uses Scheherazade New. Saved ayahs, words, and settings stay in this browser. No account, analytics, or AI service is used.</p></div></article></div>
+        <article><span>04</span><div><h3>General root meanings in Urdu</h3><p>A separate dictionary section gives selected general senses from Lane’s Arabic-English Lexicon, with Maqayis al-Lugha and Lisan al-Arab filling gaps. These are Qexplore’s AI-assisted, concise Urdu renderings of classical dictionary entries, not a published Urdu edition or a specialist-reviewed translation. Original excerpts and entry citations accompany each root. Two unresolved analyses are marked.</p><a href="https://github.com/laneslexicon/LexiconDatabase/tree/b371ab16b963def3085674a516e5f45d9c787b1d" target="_blank" rel="noreferrer">Lane’s source database <ArrowRight size={13} /></a><a href="https://github.com/wizsk/arabic_lexicons/tree/a34dc0aaa4e45ff245a9bc7213747838c6e51b5a" target="_blank" rel="noreferrer">Classical Arabic source databases <ArrowRight size={13} /></a></div></article>
+        <article><span>05</span><div><h3>Typography & privacy</h3><p>Urdu uses locally bundled Jameel Noori Nastaleeq; Arabic uses Scheherazade New. Saved ayahs, words, and settings stay in this browser. No account, analytics, or runtime AI service is used.</p></div></article></div>
       <p className="source-note"><Info size={16} /><span>Word glosses reflect their source’s translation choices. Arabic roots can have multiple senses, and a root’s meaning alone does not establish a word’s meaning in a sentence. Source attribution does not imply affiliation.</span></p>
     </Modal>}
 

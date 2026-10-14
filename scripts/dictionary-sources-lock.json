@@ -1,0 +1,10 @@
+{
+  "lane.zip": {
+    "url": "https://raw.githubusercontent.com/laneslexicon/LexiconDatabase/b371ab16b963def3085674a516e5f45d9c787b1d/lexicon.sqlite.zip",
+    "sha256": "eff9e0528572a1d2d4bc7097da78d938d6db444b0e99e8f1ef4f010c8ab15463"
+  },
+  "classical.zip": {
+    "url": "https://raw.githubusercontent.com/wizsk/arabic_lexicons/a34dc0aaa4e45ff245a9bc7213747838c6e51b5a/assets/data/db/db.sqlite.zip",
+    "sha256": "ab1e21706ee5b168d9f599c2718a27bacf9e27be7a4a452e0e6718f6fe33d4cd"
+  }
+}

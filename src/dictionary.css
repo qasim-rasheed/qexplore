@@ -1,0 +1,33 @@
+.root-definition {
+  margin: 0 16px 12px;
+  padding: 16px 13px 13px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--green-soft);
+}
+.root-definition .section-label { gap: 10px; font-size: 8px; letter-spacing: .5px; }
+.root-definition .section-label .urdu { font-size: 19px; letter-spacing: 0; line-height: 1.7; }
+.root-definition-urdu { color: var(--green-text); font-size: max(23px, var(--urdu-size)); line-height: 2.15; padding: 12px 0 8px; text-align: right; overflow-wrap: anywhere; }
+.dictionary-note { font-size: 9px; line-height: 1.8; color: var(--muted); }
+.dictionary-analysis { margin-top: 8px; color: var(--ink); }
+.dictionary-loading { display: flex; align-items: center; gap: 7px; font-size: 10px; color: var(--muted); padding: 20px 0; }
+.dictionary-citation { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 10px; }
+.dictionary-citation summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; cursor: pointer; list-style: none; font-size: 9px; line-height: 1.7; color: var(--green-text); }
+.dictionary-citation summary::-webkit-details-marker { display: none; }
+.dictionary-citation[open] summary svg { transform: rotate(180deg); }
+.dictionary-source-title { font-size: 11px; line-height: 1.6; margin: 12px 0 6px; }
+.dictionary-excerpt { margin-top: 12px; }
+.dictionary-glosses { font-size: 11px; line-height: 1.8; color: var(--green-text); margin: 8px 0; }
+.dictionary-entry-label { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 8px; font-size: 8px; color: var(--muted); }
+.dictionary-entry-label .arabic { font-size: 22px; color: var(--ink); }
+.dictionary-excerpt blockquote { font-size: 10px; line-height: 1.8; color: var(--ink); margin: 8px 0; overflow-wrap: anywhere; }
+.dictionary-excerpt blockquote.arabic { font-size: 21px; line-height: 1.9; }
+.dictionary-citation a { display: inline-flex; align-items: center; gap: 5px; font-size: 9px; line-height: 1.6; color: var(--green-text); margin-top: 10px; }
+@media (max-width: 1050px) {
+  .root-definition .section-label, .dictionary-note, .dictionary-citation summary, .dictionary-citation a { font-size: 10px; }
+  .dictionary-excerpt blockquote { font-size: 12px; }
+}
+@media (max-width: 680px) {
+  .root-definition { margin-left: 24px; margin-right: 24px; padding: 15px; }
+  .root-definition-urdu { font-size: max(26px, var(--urdu-size)); }
+}
